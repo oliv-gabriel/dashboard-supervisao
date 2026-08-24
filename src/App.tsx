@@ -480,6 +480,10 @@ export default function App() {
           <Table rows={rows} visibleBrands={visibleBrands} diasUteisMes={diasUteisMes} diasUteisSelecionados={diasUteisSelecionados} />
         </div>
       </main>
+
+      <footer className="py-6 text-center text-sm text-slate-500">
+        Desenvolvido por <a href="https://github.com/oliv-gabriel" target="_blank" rel="noopener noreferrer" className="font-medium text-indigo-600 hover:text-indigo-800 transition-colors">Gabriel Oliveira</a>
+      </footer>
     </div>
   );
 }

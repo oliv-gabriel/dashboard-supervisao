@@ -1,0 +1,24 @@
+# Estágio de Build
+FROM node:22-alpine AS builder
+
+WORKDIR /app
+
+# Copia e instala as dependências
+COPY package*.json ./
+RUN npm install
+
+# Copia o restante do código e executa o build do Vite
+COPY . .
+RUN npm run build
+
+# Estágio de Produção com Nginx
+FROM nginx:alpine
+
+# Copia os arquivos buildados da pasta dist para o Nginx
+COPY --from=builder /app/dist /usr/share/nginx/html
+
+# Expõe a porta 80
+EXPOSE 80
+
+# Inicia o Nginx
+CMD ["nginx", "-g", "daemon off;"]
