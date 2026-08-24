@@ -42,7 +42,7 @@ export default function App() {
   const fetchDados = useCallback(async () => {
     setIsLoading(true);
     try {
-      const res = await fetch(`http://${window.location.hostname}:3000/api/dashboard`, {
+      const res = await fetch(`/api/dashboard`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ dataI, dataF, codFunc, filiais: filiaisSelecionadas }),
@@ -68,7 +68,7 @@ export default function App() {
   // Buscar automaticamente ao carregar
   useEffect(() => {
     // Buscar lista de supervisores
-    fetch(`http://${window.location.hostname}:3000/api/supervisores`)
+    fetch(`/api/supervisores`)
       .then(res => res.json())
       .then(data => {
         if (Array.isArray(data)) {
@@ -79,7 +79,7 @@ export default function App() {
       .catch(err => console.error("Erro ao buscar supervisores:", err));
 
     // Buscar lista de filiais
-    fetch(`http://${window.location.hostname}:3000/api/filiais`)
+    fetch(`/api/filiais`)
       .then(res => res.json())
       .then(data => {
         if (Array.isArray(data)) {
