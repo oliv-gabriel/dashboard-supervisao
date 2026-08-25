@@ -225,8 +225,10 @@ app.post('/api/dashboard', async (req, res) => {
     });
     const diasUteisMes = diasUteisRes[0]?.QTD || 1;
     const diasUteisSelecionados = diasUteisSelRes[0]?.QTD || 1;
+    const totalGeralRow = vendasPorVendedor.get("null");
+    const qtClientesGeral = Number(totalGeralRow?.QTCLIPOS) || 0;
     res.set('Cache-Control', 'private, max-age=30');
-    res.json({ diasUteisMes, diasUteisSelecionados, data: dashboardData });
+    res.json({ diasUteisMes, diasUteisSelecionados, data: dashboardData, qtClientesGeral });
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Erro ao buscar dados do banco.';
     const isValidationError = /inválid|Selecione|posterior/i.test(message);

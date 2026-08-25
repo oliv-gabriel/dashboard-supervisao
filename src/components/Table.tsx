@@ -14,11 +14,11 @@ type Totals = {
   qt: number;
   meta: number;
   vend: number;
-  marcas: Record<Brand, { qt: number; valor: number }>;
+  marcas: Record<Brand, { qt: number; valor: number; meta: number }>;
 };
 
 function calculateTotal(list: Vendedor[]): Totals {
-  const marcas = Object.fromEntries(BRANDS.map((brand) => [brand, { qt: 0, valor: 0 }])) as Totals["marcas"];
+  const marcas = Object.fromEntries(BRANDS.map((brand) => [brand, { qt: 0, valor: 0, meta: 0 }])) as Totals["marcas"];
   let qt = 0;
   let meta = 0;
   let vend = 0;
@@ -31,6 +31,7 @@ function calculateTotal(list: Vendedor[]): Totals {
       if (!cell) continue;
       marcas[brand].qt += cell.qt;
       marcas[brand].valor += cell.valor;
+      marcas[brand].meta += cell.meta || 0;
     }
   }
   return { qt, meta, vend, marcas };
@@ -40,11 +41,13 @@ function Table({
   visibleBrands,
   diasUteisMes,
   diasUteisSelecionados,
+  qtClientesGeral,
 }: {
   rows: Vendedor[];
   visibleBrands: readonly Brand[];
   diasUteisMes: number;
   diasUteisSelecionados: number;
+  qtClientesGeral?: number;
 }) {
   const [sort, setSort] = useState<SortKey>("vendido");
   const [dir, setDir] = useState<"asc" | "desc">("desc");
@@ -72,7 +75,13 @@ function Table({
     return [...grouped.entries()].map(([pasta, list]) => ({ pasta, list, total: calculateTotal(list) }));
   }, [sorted]);
 
-  const grandTotal = useMemo(() => calculateTotal(rows), [rows]);
+  const grandTotal = useMemo(() => {
+    const t = calculateTotal(rows);
+    if (qtClientesGeral && qtClientesGeral > 0) {
+      t.qt = qtClientesGeral;
+    }
+    return t;
+  }, [rows, qtClientesGeral]);
   const toggle = (k: SortKey) => {
     if (sort === k) setDir(dir === "asc" ? "desc" : "asc");
     else {
@@ -122,7 +131,7 @@ function Table({
               %{arrow("pct")}
             </th>
             {visibleBrands.map((b) => (
-              <th key={b} colSpan={2} className="border-l border-slate-700 px-2 py-2 text-center font-semibold">
+              <th key={b} colSpan={3} className="border-l border-slate-700 px-2 py-2 text-center font-semibold">
                 {b}
               </th>
             ))}
@@ -150,17 +159,26 @@ function Table({
                       {visibleBrands.map((b) => {
                         const c = r.marcas[b];
                         const empty = !c || c.valor === 0;
+                        const metaProporcionalMarca = c && c.meta ? (c.meta / diasUteisMes) * diasUteisSelecionados : 0;
                         return (
                           <Fragment key={b}>
                             <td
                               className={`border-l border-slate-200 px-2 py-1.5 text-right tabular-nums ${
                                 empty ? "bg-rose-50 text-rose-400" : "text-slate-500"
                               }`}
+                              title="Quantidade"
                             >
                               {c ? fmtNum(c.qt) : ""}
                             </td>
                             <td
-                              className={`px-2 py-1.5 text-right tabular-nums ${empty ? "bg-rose-50 text-rose-400" : ""}`}
+                              className={`px-2 py-1.5 text-right tabular-nums text-slate-500`}
+                              title="Meta"
+                            >
+                              {metaProporcionalMarca > 0 ? fmtBRL(metaProporcionalMarca) : ""}
+                            </td>
+                            <td
+                              className={`px-2 py-1.5 text-right font-semibold tabular-nums ${empty ? "bg-rose-50 text-rose-400" : "text-black"}`}
+                              title="Vendido"
                             >
                               {c ? fmtBRL(c.valor) : ""}
                             </td>
@@ -179,14 +197,20 @@ function Table({
                   <td className="px-2 py-2 text-center tabular-nums">
                     {t.meta ? ((t.vend / ((t.meta / diasUteisMes) * diasUteisSelecionados)) * 100).toFixed(0) : 0}%
                   </td>
-                  {visibleBrands.map((b) => (
-                    <Fragment key={b}>
-                      <td className="border-l border-orange-300 px-2 py-2 text-right tabular-nums">
-                        {fmtNum(t.marcas[b].qt)}
-                      </td>
-                      <td className="px-2 py-2 text-right tabular-nums">{fmtBRL(t.marcas[b].valor)}</td>
-                    </Fragment>
-                  ))}
+                  {visibleBrands.map((b) => {
+                    const metaProporcionalT = t.marcas[b] && t.marcas[b].meta ? (t.marcas[b].meta / diasUteisMes) * diasUteisSelecionados : 0;
+                    return (
+                      <Fragment key={b}>
+                        <td className="border-l border-orange-300 px-2 py-2 text-right tabular-nums">
+                          {fmtNum(t.marcas[b].qt)}
+                        </td>
+                        <td className="px-2 py-2 text-right tabular-nums text-orange-900/70">
+                          {metaProporcionalT > 0 ? fmtBRL(metaProporcionalT) : ""}
+                        </td>
+                        <td className="px-2 py-2 text-right tabular-nums">{fmtBRL(t.marcas[b].valor)}</td>
+                      </Fragment>
+                    );
+                  })}
                 </tr>
               </Fragment>
             );
@@ -205,14 +229,20 @@ function Table({
                 <td className="px-2 py-3 text-center tabular-nums">
                   {gt.meta ? ((gt.vend / ((gt.meta / diasUteisMes) * diasUteisSelecionados)) * 100).toFixed(0) : 0}%
                 </td>
-                {visibleBrands.map((b) => (
-                  <Fragment key={`gt-${b}`}>
-                    <td className="border-l border-slate-700 px-2 py-3 text-right tabular-nums">
-                      {fmtNum(gt.marcas[b].qt)}
-                    </td>
-                    <td className="px-2 py-3 text-right tabular-nums">{fmtBRL(gt.marcas[b].valor)}</td>
-                  </Fragment>
-                ))}
+                {visibleBrands.map((b) => {
+                  const metaProporcionalGT = gt.marcas[b] && gt.marcas[b].meta ? (gt.marcas[b].meta / diasUteisMes) * diasUteisSelecionados : 0;
+                  return (
+                    <Fragment key={`gt-${b}`}>
+                      <td className="border-l border-slate-700 px-2 py-3 text-right tabular-nums">
+                        {fmtNum(gt.marcas[b].qt)}
+                      </td>
+                      <td className="px-2 py-3 text-right tabular-nums text-slate-400">
+                        {metaProporcionalGT > 0 ? fmtBRL(metaProporcionalGT) : ""}
+                      </td>
+                      <td className="px-2 py-3 text-right tabular-nums">{fmtBRL(gt.marcas[b].valor)}</td>
+                    </Fragment>
+                  );
+                })}
               </tr>
             );
           })()}

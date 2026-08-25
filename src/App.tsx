@@ -27,6 +27,7 @@ export default function App() {
   const [codFunc, setCodFunc] = useState("9999"); // Padrão "Todos"
   const [isLoading, setIsLoading] = useState(false);
   const [vendedores, setVendedores] = useState<Vendedor[]>([]);
+  const [qtClientesGeral, setQtClientesGeral] = useState(0);
   const [diasUteisMes, setDiasUteisMes] = useState(1);
   const [diasUteisSelecionados, setDiasUteisSelecionados] = useState(1);
   const [supervisores, setSupervisores] = useState<{CODSUPERVISOR: string, NOME: string}[]>([]);
@@ -53,6 +54,7 @@ export default function App() {
       if (!json.data || !Array.isArray(json.data)) throw new Error("Invalid dashboard response");
       setDiasUteisMes(json.diasUteisMes || 1);
       setDiasUteisSelecionados(json.diasUteisSelecionados || 1);
+      setQtClientesGeral(json.qtClientesGeral || 0);
       setVendedores(json.data.map((v: any) => ({
         ...v,
         pasta: supervisorNames.get(String(v.codSupervisor)) || "Sup. " + (v.codSupervisor || "?"),
@@ -117,8 +119,11 @@ export default function App() {
         }
       }
     }
+    if (qtClientesGeral > 0) {
+      gt.qt = qtClientesGeral;
+    }
     return gt;
-  }, [rows]);
+  }, [rows, qtClientesGeral]);
 
   const { totMeta, totVend, totCli, atg, semVenda, brandData } = useMemo(() => {
     let vendedoresSemVenda = 0;
@@ -161,6 +166,7 @@ export default function App() {
     ];
     visibleBrands.forEach((b) => {
       columns.push({ key: `${b}_qt`, width: 10 });
+      columns.push({ key: `${b}_meta`, width: 15 });
       columns.push({ key: `${b}_vendido`, width: 15 });
     });
     sheet.columns = columns;
@@ -176,8 +182,8 @@ export default function App() {
     
     let colIndex = 7;
     visibleBrands.forEach(() => {
-      sheet.mergeCells(1, colIndex, 1, colIndex + 1);
-      colIndex += 2;
+      sheet.mergeCells(1, colIndex, 1, colIndex + 2);
+      colIndex += 3;
     });
 
     headerRow.eachCell((cell) => {
@@ -196,8 +202,8 @@ export default function App() {
 
     for (const [pasta, list] of grouped.entries()) {
       let tQt = 0, tMeta = 0, tVend = 0;
-      const tMarcas: Record<string, {qt: number, valor: number}> = {};
-      visibleBrands.forEach(b => tMarcas[b] = {qt: 0, valor: 0});
+      const tMarcas: Record<string, {qt: number, valor: number, meta: number}> = {};
+      visibleBrands.forEach(b => tMarcas[b] = {qt: 0, valor: 0, meta: 0});
 
       list.forEach((r) => {
         tQt += r.qtClientes;
@@ -219,8 +225,11 @@ export default function App() {
           if (m) {
             tMarcas[b].qt += m.qt;
             tMarcas[b].valor += m.valor;
+            tMarcas[b].meta += m.meta || 0;
           }
+          const metaProporcionalMarca = m && m.meta ? (m.meta / diasUteisMes) * diasUteisSelecionados : 0;
           rowData[`${b}_qt`] = m ? m.qt : 0;
+          rowData[`${b}_meta`] = metaProporcionalMarca;
           rowData[`${b}_vendido`] = m ? m.valor : 0;
         });
         const excelRow = sheet.addRow(rowData);
@@ -245,8 +254,10 @@ export default function App() {
 
         visibleBrands.forEach(b => {
           const m = r.marcas[b];
+          const mCell = excelRow.getCell(`${b}_meta`);
           const vCell = excelRow.getCell(`${b}_vendido`);
           const qCell = excelRow.getCell(`${b}_qt`);
+          mCell.numFmt = '"R$ "#,##0.00';
           vCell.numFmt = '"R$ "#,##0.00';
           
           if (!m || m.valor === 0) {
@@ -272,7 +283,9 @@ export default function App() {
       };
       visibleBrands.forEach((b) => {
         const m = tMarcas[b];
+        const metaProporcionalT = m && m.meta ? (m.meta / diasUteisMes) * diasUteisSelecionados : 0;
         totalRowData[`${b}_qt`] = m ? m.qt : 0;
+        totalRowData[`${b}_meta`] = metaProporcionalT;
         totalRowData[`${b}_vendido`] = m ? m.valor : 0;
       });
       const totalRow = sheet.addRow(totalRowData);
@@ -284,6 +297,7 @@ export default function App() {
       totalRow.getCell("vendido").numFmt = '"R$ "#,##0.00';
       totalRow.getCell("pct").numFmt = "0%";
       visibleBrands.forEach(b => {
+        totalRow.getCell(`${b}_meta`).numFmt = '"R$ "#,##0.00';
         totalRow.getCell(`${b}_vendido`).numFmt = '"R$ "#,##0.00';
       });
     }
@@ -301,7 +315,9 @@ export default function App() {
     };
     visibleBrands.forEach((b) => {
       const m = gt.marcas[b];
+      const metaProporcionalGT = m && m.meta ? (m.meta / diasUteisMes) * diasUteisSelecionados : 0;
       gRowData[`${b}_qt`] = m ? m.qt : 0;
+      gRowData[`${b}_meta`] = metaProporcionalGT;
       gRowData[`${b}_vendido`] = m ? m.valor : 0;
     });
     
@@ -314,6 +330,7 @@ export default function App() {
     gtRow.getCell("vendido").numFmt = '"R$ "#,##0.00';
     gtRow.getCell("pct").numFmt = "0%";
     visibleBrands.forEach(b => {
+      gtRow.getCell(`${b}_meta`).numFmt = '"R$ "#,##0.00';
       gtRow.getCell(`${b}_vendido`).numFmt = '"R$ "#,##0.00';
     });
 
@@ -322,10 +339,10 @@ export default function App() {
   }, [rows, visibleBrands, diasUteisMes, diasUteisSelecionados, grandTotal]);
 
   return (
-    <div className="min-h-screen bg-slate-100 text-slate-900">
+    <div className="min-h-screen flex flex-col bg-slate-100 text-slate-900">
 
 
-      <main className="mx-auto w-full space-y-5 p-5">
+      <main className="mx-auto w-full flex-1 space-y-5 p-5">
         
         {/* Controles de Busca no Banco */}
         <div className="flex flex-wrap items-end gap-3 rounded-xl border border-slate-200 bg-slate-50 p-4 shadow-sm">
@@ -477,13 +494,15 @@ export default function App() {
               Exportar Excel
             </button>
           </div>
-          <Table rows={rows} visibleBrands={visibleBrands} diasUteisMes={diasUteisMes} diasUteisSelecionados={diasUteisSelecionados} />
+          <Table rows={rows} visibleBrands={visibleBrands} diasUteisMes={diasUteisMes} diasUteisSelecionados={diasUteisSelecionados} qtClientesGeral={qtClientesGeral} />
         </div>
       </main>
 
-      <footer className="py-6 text-center text-sm text-slate-500">
-        Desenvolvido por <a href="https://github.com/oliv-gabriel" target="_blank" rel="noopener noreferrer" className="font-medium text-indigo-600 hover:text-indigo-800 transition-colors">Gabriel Oliveira</a>
-      </footer>
+      {vendedores.length > 0 && (
+        <footer className="py-6 text-center text-sm text-slate-500">
+          Desenvolvido por <a href="https://github.com/oliv-gabriel" target="_blank" rel="noopener noreferrer" className="font-medium text-indigo-600 hover:text-indigo-800 transition-colors">Gabriel Oliveira</a>
+        </footer>
+      )}
     </div>
   );
 }
