@@ -166,7 +166,6 @@ export default function App() {
     ];
     visibleBrands.forEach((b) => {
       columns.push({ key: `${b}_qt`, width: 10 });
-      columns.push({ key: `${b}_meta`, width: 15 });
       columns.push({ key: `${b}_vendido`, width: 15 });
     });
     sheet.columns = columns;
@@ -174,7 +173,7 @@ export default function App() {
     const headerData = ["Cód", "Vendedor", "Qt.Cli.Pos.", "Meta", "Vl.Vendido", "%"];
     visibleBrands.forEach(b => {
       headerData.push(b);
-      headerData.push(""); // mesclagem
+      headerData.push(""); // Célula vazia para mesclagem
     });
     
     sheet.insertRow(1, headerData);
@@ -182,8 +181,8 @@ export default function App() {
     
     let colIndex = 7;
     visibleBrands.forEach(() => {
-      sheet.mergeCells(1, colIndex, 1, colIndex + 2);
-      colIndex += 3;
+      sheet.mergeCells(1, colIndex, 1, colIndex + 1);
+      colIndex += 2;
     });
 
     headerRow.eachCell((cell) => {
@@ -225,11 +224,8 @@ export default function App() {
           if (m) {
             tMarcas[b].qt += m.qt;
             tMarcas[b].valor += m.valor;
-            tMarcas[b].meta += m.meta || 0;
           }
-          const metaProporcionalMarca = m && m.meta ? (m.meta / diasUteisMes) * diasUteisSelecionados : 0;
           rowData[`${b}_qt`] = m ? m.qt : 0;
-          rowData[`${b}_meta`] = metaProporcionalMarca;
           rowData[`${b}_vendido`] = m ? m.valor : 0;
         });
         const excelRow = sheet.addRow(rowData);
@@ -283,9 +279,7 @@ export default function App() {
       };
       visibleBrands.forEach((b) => {
         const m = tMarcas[b];
-        const metaProporcionalT = m && m.meta ? (m.meta / diasUteisMes) * diasUteisSelecionados : 0;
         totalRowData[`${b}_qt`] = m ? m.qt : 0;
-        totalRowData[`${b}_meta`] = metaProporcionalT;
         totalRowData[`${b}_vendido`] = m ? m.valor : 0;
       });
       const totalRow = sheet.addRow(totalRowData);
@@ -297,7 +291,6 @@ export default function App() {
       totalRow.getCell("vendido").numFmt = '"R$ "#,##0.00';
       totalRow.getCell("pct").numFmt = "0%";
       visibleBrands.forEach(b => {
-        totalRow.getCell(`${b}_meta`).numFmt = '"R$ "#,##0.00';
         totalRow.getCell(`${b}_vendido`).numFmt = '"R$ "#,##0.00';
       });
     }
@@ -315,9 +308,7 @@ export default function App() {
     };
     visibleBrands.forEach((b) => {
       const m = gt.marcas[b];
-      const metaProporcionalGT = m && m.meta ? (m.meta / diasUteisMes) * diasUteisSelecionados : 0;
       gRowData[`${b}_qt`] = m ? m.qt : 0;
-      gRowData[`${b}_meta`] = metaProporcionalGT;
       gRowData[`${b}_vendido`] = m ? m.valor : 0;
     });
     
