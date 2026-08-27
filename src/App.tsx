@@ -250,10 +250,8 @@ export default function App() {
 
         visibleBrands.forEach(b => {
           const m = r.marcas[b];
-          const mCell = excelRow.getCell(`${b}_meta`);
           const vCell = excelRow.getCell(`${b}_vendido`);
           const qCell = excelRow.getCell(`${b}_qt`);
-          mCell.numFmt = '"R$ "#,##0.00';
           vCell.numFmt = '"R$ "#,##0.00';
           
           if (!m || m.valor === 0) {
@@ -321,7 +319,6 @@ export default function App() {
     gtRow.getCell("vendido").numFmt = '"R$ "#,##0.00';
     gtRow.getCell("pct").numFmt = "0%";
     visibleBrands.forEach(b => {
-      gtRow.getCell(`${b}_meta`).numFmt = '"R$ "#,##0.00';
       gtRow.getCell(`${b}_vendido`).numFmt = '"R$ "#,##0.00';
     });
 
