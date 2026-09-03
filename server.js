@@ -70,13 +70,8 @@ function withFiliais(template, clause) {
 }
 
 function withPermissions(template, codFunc) {
-  const codFuncFilter = codFunc === '9999' ? '' : 'AND l.CODFUNC = :CODFUNC';
-  const supervisorPermission = 'AND EXISTS (SELECT 1 FROM PCLIB l WHERE l.CODTABELA = 7 ' + codFuncFilter + ' AND l.CODIGON = ';
-  if (template.includes('FROM PCUSUARI u')) {
-    return template.replace('/* PERMISSOES */', supervisorPermission + 'u.CODSUPERVISOR)');
-  }
-  const supplierPermission = 'AND EXISTS (SELECT 1 FROM PCLIB l WHERE l.CODTABELA = 3 ' + codFuncFilter + ' AND l.CODIGON = p.CODFORNEC)';
-  return template.replace('/* PERMISSOES */', supervisorPermission + 'c.CODSUPERVISOR)\n   ' + supplierPermission);
+  if (codFunc === '9999') return template.replace('/* PERMISSOES */', '');
+  return template.replace('/* PERMISSOES */', 'AND u.CODSUPERVISOR = :CODFUNC');
 }
 function parseRequestDate(value, endOfDay = false) {
   if (typeof value !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(value)) {
@@ -240,7 +235,9 @@ app.post('/api/dashboard', async (req, res) => {
 async function start() {
   try {
     try {
-      oracledb.initOracleClient();
+      // Para bancos mais antigos (erro NJS-116), você precisa do Oracle Instant Client.
+      // Baixe e extraia no seu PC. Depois, descomente a linha abaixo e coloque o caminho:
+      oracledb.initOracleClient({ libDir: 'C:\\oracle\\instantclient_23_26' });
     } catch (err) {
       console.warn('Oracle Client não inicializado em Thick mode; usando o modo disponível.', err.message);
     }
