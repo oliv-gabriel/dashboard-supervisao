@@ -235,9 +235,12 @@ app.post('/api/dashboard', async (req, res) => {
 async function start() {
   try {
     try {
-      // Para bancos mais antigos (erro NJS-116), você precisa do Oracle Instant Client.
-      // Baixe e extraia no seu PC. Depois, descomente a linha abaixo e coloque o caminho:
-      oracledb.initOracleClient({ libDir: 'C:\\oracle\\instantclient_23_26' });
+      // Usa a variável ORACLE_LIB_DIR do .env (se existir) para carregar o Oracle Client
+      if (process.env.ORACLE_LIB_DIR) {
+        oracledb.initOracleClient({ libDir: process.env.ORACLE_LIB_DIR });
+      } else {
+        oracledb.initOracleClient();
+      }
     } catch (err) {
       console.warn('Oracle Client não inicializado em Thick mode; usando o modo disponível.', err.message);
     }
