@@ -158,13 +158,14 @@ function Table({
                       </td>
                       {visibleBrands.map((b) => {
                         const c = r.marcas[b];
+                        const semVenda = !c || c.valor === 0;
                         const semMeta = !c || !c.meta || c.meta === 0;
                         const metaProporcionalMarca = c && c.meta ? (c.meta / diasUteisMes) * diasUteisSelecionados : 0;
                         return (
                           <Fragment key={b}>
                             <td
                               className={`border-l border-slate-200 px-2 py-1.5 text-right tabular-nums ${
-                                semMeta ? "bg-rose-50 text-rose-400" : "text-slate-500"
+                                semVenda ? "bg-rose-50 text-rose-400" : "text-slate-500"
                               }`}
                               title="Quantidade"
                             >
@@ -180,7 +181,7 @@ function Table({
                             </td>
                             <td
                               className={`px-2 py-1.5 text-right font-semibold tabular-nums ${
-                                semMeta ? "bg-rose-50 text-rose-400" : "text-black"
+                                semVenda ? "bg-rose-50 text-rose-400" : "text-black"
                               }`}
                               title="Vendido"
                             >
