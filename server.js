@@ -26,7 +26,7 @@ const dbConfig = {
 const SQL_DIR = path.join(__dirname, 'SQL');
 const SQL = Object.fromEntries(
   await Promise.all(
-    ['DASHBOARD_VENDEDORES.SQL', 'DASHBOARD_VENDAS.SQL', 'DASHBOARD_METAS.SQL']
+    ['DASHBOARD_VENDEDORES.SQL', 'DASHBOARD_VENDAS.SQL', 'DASHBOARD_METAS.SQL', 'DASHBOARD_METAS_RCA.SQL']
       .map(async (file) => [file, await fs.readFile(path.join(SQL_DIR, file), 'utf8')])
   )
 );
@@ -151,13 +151,15 @@ app.post('/api/dashboard', async (req, res) => {
       ? {}
       : { CODFUNC: normalizedCodFunc };
     const cacheKey = [dataI, dataF, normalizedCodFunc, ...Object.values(filialBinds)].join('|');
-    const [vendedores, vendas, metas, diasUteisRes, diasUteisSelRes] = await Promise.all([
+    const [vendedores, vendas, metas, metasRca, diasUteisRes, diasUteisSelRes] = await Promise.all([
       cached(dashboardCache, 'vendedores:' + normalizedCodFunc, DASHBOARD_CACHE_MS,
         () => query(withPermissions(SQL['DASHBOARD_VENDEDORES.SQL'], normalizedCodFunc), vendedoresBinds)),
       cached(dashboardCache, 'vendas:' + cacheKey, DASHBOARD_CACHE_MS,
         () => query(withPermissions(withFiliais(SQL['DASHBOARD_VENDAS.SQL'], clause), normalizedCodFunc), permissionBinds)),
       cached(dashboardCache, 'metas:' + cacheKey, DASHBOARD_CACHE_MS,
         () => query(withFiliais(SQL['DASHBOARD_METAS.SQL'], clause), commonBinds)),
+      cached(dashboardCache, 'metasRca:' + cacheKey, DASHBOARD_CACHE_MS,
+        () => query(withFiliais(SQL['DASHBOARD_METAS_RCA.SQL'], clause), commonBinds)),
       cached(dashboardCache, 'diasUteis:' + dateI.getTime() + '|' + dateF.getTime(), DASHBOARD_CACHE_MS,
         () => query(`SELECT COUNT(*) AS QTD FROM PCDATAS WHERE DATA BETWEEN TRUNC(:DATAI, 'MM') AND LAST_DAY(:DATAF) AND DIAUTIL = 'S'`, { DATAI: dateI, DATAF: dateF })),
       cached(dashboardCache, 'diasUteisSel:' + dateI.getTime() + '|' + dateF.getTime(), DASHBOARD_CACHE_MS,
@@ -188,11 +190,17 @@ app.post('/api/dashboard', async (req, res) => {
     }
 
     const metasGlobaisPorVendedor = new Map();
+    for (const row of metasRca) {
+      const codUsur = String(row.CODUSUR);
+      metasGlobaisPorVendedor.set(codUsur, Number(row.VLMETA) || 0);
+    }
+
+    const metasSomaIndustrias = new Map();
     for (const row of metas) {
       const codUsur = String(row.CODUSUR);
       
-      if (!metasGlobaisPorVendedor.has(codUsur)) metasGlobaisPorVendedor.set(codUsur, 0);
-      metasGlobaisPorVendedor.set(codUsur, metasGlobaisPorVendedor.get(codUsur) + (Number(row.VLMETA) || 0));
+      if (!metasSomaIndustrias.has(codUsur)) metasSomaIndustrias.set(codUsur, 0);
+      metasSomaIndustrias.set(codUsur, metasSomaIndustrias.get(codUsur) + (Number(row.VLMETA) || 0));
 
       const marca = marcasMapping[row.CODFORNEC];
       if (!marca) continue;
@@ -207,7 +215,12 @@ app.post('/api/dashboard', async (req, res) => {
     const dashboardData = vendedores.map((vendedor) => {
       const cod = String(vendedor.CODUSUR);
       const venda = vendasPorVendedor.get(cod);
-      const meta = metasGlobaisPorVendedor.get(cod) || 0;
+      
+      let meta = metasGlobaisPorVendedor.get(cod) || 0;
+      if (meta === 0) {
+        meta = metasSomaIndustrias.get(cod) || 0;
+      }
+      
       return {
         cod,
         nome: vendedor.NOME,
