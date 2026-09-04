@@ -158,29 +158,33 @@ function Table({
                       </td>
                       {visibleBrands.map((b) => {
                         const c = r.marcas[b];
-                        const empty = !c || c.valor === 0;
+                        const semMeta = !c || !c.meta || c.meta === 0;
                         const metaProporcionalMarca = c && c.meta ? (c.meta / diasUteisMes) * diasUteisSelecionados : 0;
                         return (
                           <Fragment key={b}>
                             <td
                               className={`border-l border-slate-200 px-2 py-1.5 text-right tabular-nums ${
-                                empty ? "bg-rose-50 text-rose-400" : "text-slate-500"
+                                semMeta ? "bg-rose-50 text-rose-400" : "text-slate-500"
                               }`}
                               title="Quantidade"
                             >
-                              {c ? fmtNum(c.qt) : ""}
+                              {c && c.qt > 0 ? fmtNum(c.qt) : ""}
                             </td>
                             <td
-                              className={`px-2 py-1.5 text-right tabular-nums text-slate-500`}
+                              className={`px-2 py-1.5 text-right tabular-nums ${
+                                semMeta ? "bg-rose-50 text-rose-400" : "text-slate-500"
+                              }`}
                               title="Meta"
                             >
                               {metaProporcionalMarca > 0 ? fmtBRL(metaProporcionalMarca) : ""}
                             </td>
                             <td
-                              className={`px-2 py-1.5 text-right font-semibold tabular-nums ${empty ? "bg-rose-50 text-rose-400" : "text-black"}`}
+                              className={`px-2 py-1.5 text-right font-semibold tabular-nums ${
+                                semMeta ? "bg-rose-50 text-rose-400" : "text-black"
+                              }`}
                               title="Vendido"
                             >
-                              {c ? fmtBRL(c.valor) : ""}
+                              {c && c.valor > 0 ? fmtBRL(c.valor) : ""}
                             </td>
                           </Fragment>
                         );
